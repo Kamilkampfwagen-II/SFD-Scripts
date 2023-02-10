@@ -26,7 +26,7 @@ private static readonly Vector2 FOOT_HEAD_OFFSET = new Vector2(0,14);
 private static readonly Vector2 CROUCH_HEAD_OFFSET = new Vector2(0,10);
 private static readonly Vector2 ROLL_HEAD_OFFSET = new Vector2(0,3);
 public static readonly string[] AOE_BREAK_LIST = {"Balloon", "Beachball", "Computer00", "Monitor", "CardboardBox", "GrabCan", "Cup", "DrinkingGlass", "Lamp00", "Paper", "Light", "GlassSh", "Parrot"};
-public static readonly string[] AOE_BREAK_IGNORE_LIST = {"_D", "Weak", "Debris", "Warning"};
+public static readonly string[] AOE_BREAK_IGNORE_LIST = {"Bg", "_D", "Weak", "Debris", "Warning"};
 public static readonly string[] RAYCAST_IGNORE_LIST = {"Glass", "Invisible"};
 
 public static void OnStartup()
