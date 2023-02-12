@@ -1,0 +1,43 @@
+I know, the GIF is horrible.
+Thanks to Discord user [b] @dsaf#5025 [/b] for helping me with the script!
+
+[b] THIS SCRIPT REQUIRES SUPERFIGHTERS REDUX TO BE INSTALLED BECAUSE OF THE WHITE LIGHT TILE USED FOR VISUALS. IT WILL STILL WORK IN VANILLA. [/b]
+
+[h1] WHAT IS THIS? [/h1]
+Vanilla grenades replaced with flashbangs:
+[list]
+[*] When detonated, it will perform a ray cast to each player in its range. Except for players, glass, and invisible block, anything in its way that absorbs projectiles prevents the target player from being affected.
+[*] Getting stunned will disarm you no matter the following:
+[*] If the player is facing toward the flashbang, they will stagger for an amount of time that is proportional to how close to the detonation.
+[*] If the player is facing opposite to the detonation, they will fall and be stunned for 500 milliseconds.
+[*] You can avoid being stunned by performing a block precisely at the moment of detonation.
+[/list]
+
+[h1] HOW TO SETUP: [/h1]
+[b] For texture replacement: [/b]
+[list]
+[*] Head into: [i] C:\Program Files (x86)\Steam\steamapps\common\Superfighters Deluxe\Content\Data\Images\Weapons\Thrown [/i]
+[*] Download [url=https://github.com/Kamilkampfwagen-II/SFD-Scripts/tree/main/Flashbang/Textures/XNB] these. [/url]
+[*] Backup original files and replace them with downloaded ones.
+[/list]
+[u] You can always revert all changes by verifying the files through the Steam. [/u]
+
+[h1] TECHNICAL LIMITATIONS: [/h1]
+[list]
+[*][b] Flashbangs can't be cooked: [/b]
+In fact, you just need to wait 1 hour to enjoy an explosion :) I have done this on purpose because I couldn't find out a reliable way to catch detonations caused by overcooking.
+
+[*][b] Bullet hits won't detonate them as collision with projectiles is disabled: [/b]
+I couldn't figure out how to catch the detonation and prevent it from exploding typically.
+Also, it would be OP to throw it to someone already firing his gun.
+
+[*][b] Custom player size is not supported since there is no way the script can gather information: [/b]
+GetSize() GetSizeFactor() GetBaseSize() all return the default values?!
+
+[*][b] The only way to customize and rebalance the script is to edit it via the script editor: [/b]
+I am planning to implement a command line interface to edit variables.
+ [/list]
+
+[h1] BUGS AND SUGGESTIONS: [/h1]
+[b] Please report bugs in comments or Github with a clear explanation of what happened and how to recreate them. [/b]
+It probably needs some balancing, I am open to suggestions.
