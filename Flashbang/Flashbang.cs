@@ -200,7 +200,6 @@ private static void PlayEffect(Vector2 here, string customID)
     for (int index = 1; index < 10; index++)
     {
         Game.CreateObject("BgLightRadiusWhite03A", here).CustomID = customID;
-        Game.CreateObject("FgLightRadiusWhite03A", here).CustomID = customID;
     }
 
     // Camera Shake:
