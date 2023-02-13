@@ -199,6 +199,7 @@ private static void PlayEffect(Vector2 here, string customID)
     // White light tile from SFR:
     for (int index = 1; index < 10; index++)
     {
+        Game.CreateObject("FgLightRadiusWhite03A", here).CustomID = customID;
         Game.CreateObject("BgLightRadiusWhite03A", here).CustomID = customID;
     }
 
