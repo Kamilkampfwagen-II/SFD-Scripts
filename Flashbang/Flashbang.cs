@@ -38,10 +38,13 @@ public static void OnStartup()
 // Triggered by Event Listeners:
 public static void OnObjectCreated(IObject[] obj_list)
 {
-    foreach (IObjectGrenadeThrown grenade_thrown in obj_list.Where(obj => obj.Name == "WpnGrenadesThrown"))
+    foreach (IObject obj in obj_list)
     {
-        grenade_thrown.SetExplosionTimer(FUSE_TIME_MS);
-        grenade_thrown.SetDudChance(100);
+        if (obj.Name != "WpnGrenadesThrown") {continue;}
+        IObjectGrenadeThrown grenadeThrown = (IObjectGrenadeThrown)obj;
+
+        grenadeThrown.SetExplosionTimer(FUSE_TIME_MS);
+        grenadeThrown.SetDudChance(100);
 
         CollisionFilter collisionFilter = new CollisionFilter
         {
@@ -54,9 +57,9 @@ public static void OnObjectCreated(IObject[] obj_list)
             MaskBits = 32779,
             ProjectileHit = false
         };
-        grenade_thrown.SetCollisionFilter(collisionFilter);
+        grenadeThrown.SetCollisionFilter(collisionFilter);
 
-        RunTimer(FUSE_TIME_MS, "Detonate", grenade_thrown.UniqueID.ToString());
+        RunTimer(FUSE_TIME_MS, "Detonate", grenadeThrown.UniqueID.ToString());
     }
 }
 public static void OnPlayerKeyInput(IPlayer ply, VirtualKeyInfo[] keyInfo_list)
@@ -73,32 +76,35 @@ public static void Detonate(TriggerArgs args)
     IObject timerTrigger = (IObject)args.Caller;
     timerTrigger.Remove();
 
-    IObject grenade_thrown = Game.GetObject(int.Parse(timerTrigger.CustomID));
-    if (grenade_thrown == null) {return;}
-    grenade_thrown.Remove();
+    IObject grenadeThrown = Game.GetObject(int.Parse(timerTrigger.CustomID));
+    if (grenadeThrown == null) {return;}
+    grenadeThrown.Remove();
 
-    Vector2 here = grenade_thrown.GetWorldPosition();
+    Vector2 here = grenadeThrown.GetWorldPosition();
 
-    string effectTile_customID = string.Format("EffectTile{0}", grenade_thrown.UniqueID);
+    string effectTile_customID = string.Format("EffectTile{0}", grenadeThrown.UniqueID);
     PlayFX(here, effectTile_customID);
 
     AreaEffect(new Area(here - new Vector2(MAX_AOE_RANGE,MAX_AOE_RANGE), here + new Vector2(MAX_AOE_RANGE,MAX_AOE_RANGE)));
 
-    foreach (IPlayer ply in Game.GetPlayers().Where(ply => !ply.IsDead && !ply.IsBlocking))
+    foreach (IPlayer ply in Game.GetPlayers())
     {
-        Vector2 ply_head_pos = GetPlayerHeadPosition(ply);
+        if (ply.IsDead) {continue;}
+        if (ply.IsBlocking) {continue;}
 
-        float distance = (here - ply_head_pos).Length();
+        Vector2 ply_headPos = GetPlayerHeadPosition(ply);
+
+        float distance = (here - ply_headPos).Length();
         if (distance > MAX_FLASH_RANGE) {continue;}
 
         RayCastInput rayCastInput = new RayCastInput() {IncludeOverlap = true, FilterOnMaskBits = true, MaskBits = 0xFFFF};
-        RayCastResult[] rayCastResult_list = Game.RayCast(here, ply_head_pos, rayCastInput);
+        RayCastResult[] rayCastResult_list = Game.RayCast(here, ply_headPos, rayCastInput);
         bool isHit = AnalyzeRayCastResults(rayCastResult_list, ply);
         if (!isHit) {continue;}
 
         bool isFacing = false;
-        if (here.X > ply_head_pos.X && ply.FacingDirection == 1) {isFacing = true;}
-        if (here.X < ply_head_pos.X && ply.FacingDirection == -1) {isFacing = true;}
+        if (here.X > ply_headPos.X && ply.FacingDirection == 1) {isFacing = true;}
+        if (here.X < ply_headPos.X && ply.FacingDirection == -1) {isFacing = true;}
 
         float time = Map(MAX_FLASH_RANGE - distance, 0, MAX_FLASH_RANGE - MIN_FLASH_RANGE, 0, MAX_FLASH_TIME_MS);
 
@@ -139,24 +145,24 @@ private static void AreaEffect(Area AOE)
 }
 public static Vector2 GetPlayerHeadPosition(IPlayer ply) // Needs improvement
 {
-    Vector2 head_offset;
+    Vector2 ply_headOffset;
     if (ply.IsCrouching || ply.IsLedgeGrabbing)
     {
-        head_offset = CROUCH_HEAD_OFFSET;
+        ply_headOffset = CROUCH_HEAD_OFFSET;
     }
     else if (ply.IsRolling)
     {
-        head_offset = ROLL_HEAD_OFFSET;
+        ply_headOffset = ROLL_HEAD_OFFSET;
     }
     else if (ply.IsDiving)
     {
-        head_offset = ROLL_HEAD_OFFSET;
+        ply_headOffset = ROLL_HEAD_OFFSET;
     }
     else
     {
-        head_offset = FOOT_HEAD_OFFSET;
+        ply_headOffset = FOOT_HEAD_OFFSET;
     }
-    return ply.GetWorldPosition() + head_offset;
+    return ply.GetWorldPosition() + ply_headOffset;
 }
 private static bool AnalyzeRayCastResults(RayCastResult[] rayCastResult_list, IObject obj)
 {
