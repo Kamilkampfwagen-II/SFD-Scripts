@@ -20,13 +20,14 @@ const int MAX_AOE_RANGE = 100;
 const int MIN_FLASH_RANGE = 20;
 const int MAX_FLASH_RANGE = 100;
 const int MAX_FLASH_TIME_MS = 1750;
-const int EFFECT_TIME_MS = 50;
+const int VFX_TIME_MS = 50;
+const float SCREEN_SHAKE_TIME = 200;
 const float SCREEN_SHAKE_INTENSITY = 10f;
 private static readonly Vector2 FOOT_HEAD_OFFSET = new Vector2(0,14);
 private static readonly Vector2 CROUCH_HEAD_OFFSET = new Vector2(0,10);
 private static readonly Vector2 ROLL_HEAD_OFFSET = new Vector2(0,3);
-public static readonly string[] AOE_BREAK_LIST = {"Balloon", "Beachball", "Computer00", "Monitor", "CardboardBox", "GrabCan", "Cup", "DrinkingGlass", "Lamp00", "Paper", "Light", "GlassSh", "Parrot"};
-public static readonly string[] AOE_BREAK_IGNORE_LIST = {"Bg", "_D", "Weak", "Debris", "Warning"};
+public static readonly string[] AOE_DESTROY_LIST = {"Balloon", "Beachball", "Computer00", "Monitor", "CardboardBox", "GrabCan", "Cup", "DrinkingGlass", "Lamp00", "Paper", "Light", "GlassSh", "Parrot"};
+public static readonly string[] AOE_IGNORE_LIST = {"Bg", "_D", "Weak", "Debris", "Warning"};
 public static readonly string[] RAYCAST_IGNORE_LIST = {"Glass", "Invisible"};
 
 public static void OnStartup()
@@ -60,7 +61,7 @@ public static void OnObjectCreated(IObject[] obj_list)
 }
 public static void OnPlayerKeyInput(IPlayer ply, VirtualKeyInfo[] keyInfo_list)
 {
-    if (keyInfo_list.Any(keyInfo => keyInfo.Key == VirtualKey.ATTACK)) {return;}
+    if (!keyInfo_list.Any(keyInfo => keyInfo.Key == VirtualKey.ATTACK)) {return;}
     if (!ply.IsHoldingActiveThrowable) {return;}
     if (ply.GetActiveThrowableWeaponItem() != WeaponItem.GRENADES) {return;}
 
@@ -72,39 +73,20 @@ public static void Detonate(TriggerArgs args)
     IObject timerTrigger = (IObject)args.Caller;
     timerTrigger.Remove();
 
-    IObject grenade_thrown = Game.GetObject(Int32.Parse(timerTrigger.CustomID));
+    IObject grenade_thrown = Game.GetObject(int.Parse(timerTrigger.CustomID));
     if (grenade_thrown == null) {return;}
     grenade_thrown.Remove();
 
     Vector2 here = grenade_thrown.GetWorldPosition();
-    Area aoe_obj = new Area(here - new Vector2(MAX_AOE_RANGE,MAX_AOE_RANGE), here + new Vector2(MAX_AOE_RANGE,MAX_AOE_RANGE));
-    AreaEffect(aoe_obj);
 
     string effectTile_customID = string.Format("EffectTile{0}", grenade_thrown.UniqueID);
-    PlayEffect(here, effectTile_customID);
+    PlayFX(here, effectTile_customID);
 
-    foreach (IPlayer ply in Game.GetPlayers().Where(ply => !ply.IsDead))
+    AreaEffect(new Area(here - new Vector2(MAX_AOE_RANGE,MAX_AOE_RANGE), here + new Vector2(MAX_AOE_RANGE,MAX_AOE_RANGE)));
+
+    foreach (IPlayer ply in Game.GetPlayers().Where(ply => !ply.IsDead && !ply.IsBlocking))
     {
-        if (ply.IsBlocking) {continue;}
-
-        Vector2 head_offset;
-        if (ply.IsCrouching || ply.IsLedgeGrabbing)
-        {
-            head_offset = CROUCH_HEAD_OFFSET;
-        }
-        else if (ply.IsRolling)
-        {
-            head_offset = ROLL_HEAD_OFFSET;
-        }
-        else if (ply.IsDiving)
-        {
-            head_offset = ROLL_HEAD_OFFSET;
-        }
-        else
-        {
-            head_offset = FOOT_HEAD_OFFSET;
-        }
-        Vector2 ply_head_pos = ply.GetWorldPosition() + head_offset;
+        Vector2 ply_head_pos = GetPlayerHeadPosition(ply);
 
         float distance = (here - ply_head_pos).Length();
         if (distance > MAX_FLASH_RANGE) {continue;}
@@ -119,10 +101,11 @@ public static void Detonate(TriggerArgs args)
         if (here.X < ply_head_pos.X && ply.FacingDirection == -1) {isFacing = true;}
 
         float time = Map(MAX_FLASH_RANGE - distance, 0, MAX_FLASH_RANGE - MIN_FLASH_RANGE, 0, MAX_FLASH_TIME_MS);
+
         Flash(ply, (int)time, isFacing);
     }
 }
-public static void RemoveEffect(TriggerArgs args)
+public static void RemoveVFX(TriggerArgs args)
 {
     IObject timerTrigger = (IObject)args.Caller;
     timerTrigger.Remove();
@@ -137,7 +120,7 @@ public static void UnFlash(TriggerArgs args)
     IObject timerTrigger = (IObject)args.Caller;
     timerTrigger.Remove();
 
-    IPlayer ply = Game.GetPlayer(Int32.Parse(timerTrigger.CustomID));
+    IPlayer ply = Game.GetPlayer(int.Parse(timerTrigger.CustomID));
     if (ply == null) {return;}
 
     ply.AddCommand(new PlayerCommand(PlayerCommandType.StopStagger));
@@ -149,10 +132,31 @@ private static void AreaEffect(Area AOE)
     foreach (IObject obj in Game.GetObjectsByArea(AOE, PhysicsLayer.Active))
     {
         if ((obj.GetWorldPosition() - AOE.Center).Length() > MAX_AOE_RANGE) {continue;}
-        if (!AOE_BREAK_LIST.Any(obj.Name.Contains)) {continue;}
-        if (AOE_BREAK_IGNORE_LIST.Any(obj.Name.Contains)) {continue;}
+        if (!AOE_DESTROY_LIST.Any(obj.Name.Contains)) {continue;}
+        if (AOE_IGNORE_LIST.Any(obj.Name.Contains)) {continue;}
         obj.Destroy();
     }
+}
+public static Vector2 GetPlayerHeadPosition(IPlayer ply) // Needs improvement
+{
+    Vector2 head_offset;
+    if (ply.IsCrouching || ply.IsLedgeGrabbing)
+    {
+        head_offset = CROUCH_HEAD_OFFSET;
+    }
+    else if (ply.IsRolling)
+    {
+        head_offset = ROLL_HEAD_OFFSET;
+    }
+    else if (ply.IsDiving)
+    {
+        head_offset = ROLL_HEAD_OFFSET;
+    }
+    else
+    {
+        head_offset = FOOT_HEAD_OFFSET;
+    }
+    return ply.GetWorldPosition() + head_offset;
 }
 private static bool AnalyzeRayCastResults(RayCastResult[] rayCastResult_list, IObject obj)
 {
@@ -194,28 +198,28 @@ private static void Flash(IPlayer ply, int time, bool isFacing)
         RunTimer(500, "UnFlash", ply.UniqueID.ToString());
     }
 }
-private static void PlayEffect(Vector2 here, string customID)
+private static void PlayFX(Vector2 here, string customID)
 {
     // White light tile from SFR:
     for (int index = 1; index < 10; index++)
     {
-        Game.CreateObject("FgLightRadiusWhite03A", here).CustomID = customID;
-        Game.CreateObject("BgLightRadiusWhite03A", here).CustomID = customID;
+        // Game.CreateObject("FgLightRadiusWhite03A", here).CustomID = customID;
+        Game.CreateObject("BgLightRadiusWhite03A", here).CustomID = customID; // Temporary fix for SFR 1.0.3c update
     }
-
-    // Camera Shake:
-    Game.PlayEffect("CAM_S", here, SCREEN_SHAKE_INTENSITY, (float)EFFECT_TIME_MS*4, true);
 
     // Particles:
     Game.PlayEffect("DestroyMetal", here);  // Metal
     Game.PlayEffect("S_P", here);           // Sparks
     Game.PlayEffect("STM", here);           // Steam
 
+    // Camera Shake:
+    Game.PlayEffect("CAM_S", here, SCREEN_SHAKE_INTENSITY, SCREEN_SHAKE_TIME, true);
+
     // SFX:
     Game.PlaySound("Explosion", here);
     Game.PlaySound("Splash", here);
 
-    RunTimer(EFFECT_TIME_MS, "RemoveEffect", customID);
+    RunTimer(VFX_TIME_MS, "RemoveVFX", customID);
 }
 private static void RunTimer(int intervalTime_ms, string scriptMethod, string customID = "", int repeatCount = 1)
 {
